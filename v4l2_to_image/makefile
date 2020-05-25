@@ -15,4 +15,4 @@ main.o: main.c
 	$(CC) -c $< -o $@
 
 clean:
-	rm -rf $(obj) $(prom)
+	rm -rf $(obj) $(prom) *.jpg
