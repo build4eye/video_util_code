@@ -106,23 +106,6 @@ void printfCapabilities(struct Camera* c) {
   }
 }
 
-// info->format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-// // TODO: 不仅仅支持V4L2_PIX_FMT_MJPEG
-// info->format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
-// info->format.fmt.pix.width = width;
-// info->format.fmt.pix.height = height;
-// info->format.fmt.pix.field = V4L2_FIELD_NONE;
-// ioctl(c->fd, VIDIOC_S_FMT, &(info->format));
-
-// //设置流相关，帧率
-// info->stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-// info->stream.parm.capture.timeperframe.denominator = 30;
-// info->stream.parm.capture.timeperframe.numerator = 1;
-// ioctl(c->fd, VIDIOC_S_PARM, &(info->stream));
-
-// NewCamera fail return 0
-// cameraName = "/dev/video0"
-
 int main(int argc, char* argv[]) {
   if (argc != 2) return -1;
 
@@ -131,26 +114,42 @@ int main(int argc, char* argv[]) {
   //打印设备信息
   printf("Driver Name:%s\nCard Name:%s\nBus info:%s\nDriver Version:%u.%u.%u\n",
          c->Param.cap.driver, c->Param.cap.card, c->Param.cap.bus_info,
-         (c->Param.cap.version >> 16) & 0XFF, (c->Param.cap.version >> 8) & 0XFF,
-         c->Param.cap.version & 0XFF);
+         (c->Param.cap.version >> 16) & 0XFF,
+         (c->Param.cap.version >> 8) & 0XFF, c->Param.cap.version & 0XFF);
   printfCapabilities(c);
 
   //打印设备支持的格式
-  printf("Support format:\n");
-  for (unsigned char _i = 0; _i < 255; _i++) {
-    char* pf = (void*)0;
-    pf = c->GetVideoPixelFormat(c, _i);
-    if (pf != 0) printf(" %d.%s\n", _i, pf);
-  }
-
+  // printf("Support format:\n");
+  // for (unsigned char _i = 0; _i < 255; _i++) {
+  //   char* pf = (void*)0;
+  //   pf = c->GetVideoPixelFormat(c, _i);
+  //   if (pf != 0) printf(" %d.%s\n", _i, pf);
+  // }
   // TODO:打印支持的像素　eg:1920*1080
 
-  // c->Param.format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  // c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
+  // TODO:
+  printf("c->Param.format.fmt.pix.field  = %d\n",
+         c->Param.format.fmt.pix.field);
+  printf("c->Param.format.fmt.pix.pixelformat   = %d\n",
+         c->Param.format.fmt.pix.pixelformat);
+
+  memset(&(c->Param.format), 0, sizeof(struct v4l2_format));
+  c->Param.format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
+  c->Param.format.fmt.pix.height = 480;
+  c->Param.format.fmt.pix.width = 640;
   // c->Param.format.fmt.pix.height = 720;
   // c->Param.format.fmt.pix.width = 1280;
-  // c->Param.format.fmt.pix.field = V4L2_FIELD_NONE;
-  // c->Init(c);
+  c->Param.format.fmt.pix.field = V4L2_FIELD_NONE;
+  //设置流相关，帧率
+  c->Param.stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  c->Param.stream.parm.capture.timeperframe.denominator = 30;
+  c->Param.stream.parm.capture.timeperframe.numerator = 1;
+
+  c->Param.reqbuf.count = 4;
+  c->Param.reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  c->Param.reqbuf.memory = V4L2_MEMORY_MMAP;
+  c->Init(c);
 
   c->Start(c);
 
@@ -170,7 +169,7 @@ int main(int argc, char* argv[]) {
       return -1;
     }
     // FIXME：为什么是*２
-    fwrite(buf->start, 1280 * 720 * 1, 1, fp2);
+    fwrite(buf->start, 1280 * 720 * 2, 1, fp2);
     fclose(fp2);
     printf("save %s OK\n", file_name);
 

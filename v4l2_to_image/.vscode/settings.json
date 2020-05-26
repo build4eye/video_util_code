@@ -1,6 +1,0 @@
-{
-  "files.associations": {
-    "v4l2_device.h": "c",
-    "videodev2.h": "c"
-  }
-}
