@@ -119,27 +119,20 @@ int main(int argc, char* argv[]) {
   printfCapabilities(c);
 
   //打印设备支持的格式
-  // printf("Support format:\n");
-  // for (unsigned char _i = 0; _i < 255; _i++) {
-  //   char* pf = (void*)0;
-  //   pf = c->GetVideoPixelFormat(c, _i);
-  //   if (pf != 0) printf(" %d.%s\n", _i, pf);
-  // }
+  printf("Support format:\n");
+  for (unsigned char _i = 0; _i < 255; _i++) {
+    char* pf = (void*)0;
+    pf = c->GetVideoPixelFormat(c, _i);
+    if (pf != 0) printf(" %d.%s\n", _i, pf);
+  }
   // TODO:打印支持的像素　eg:1920*1080
 
-  // TODO:
-  printf("c->Param.format.fmt.pix.field  = %d\n",
-         c->Param.format.fmt.pix.field);
-  printf("c->Param.format.fmt.pix.pixelformat   = %d\n",
-         c->Param.format.fmt.pix.pixelformat);
-
-  memset(&(c->Param.format), 0, sizeof(struct v4l2_format));
   c->Param.format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
-  c->Param.format.fmt.pix.height = 480;
-  c->Param.format.fmt.pix.width = 640;
-  // c->Param.format.fmt.pix.height = 720;
-  // c->Param.format.fmt.pix.width = 1280;
+  // c->Param.format.fmt.pix.height = 480;
+  // c->Param.format.fmt.pix.width = 640;
+  c->Param.format.fmt.pix.height = 720;
+  c->Param.format.fmt.pix.width = 1280;
   c->Param.format.fmt.pix.field = V4L2_FIELD_NONE;
   //设置流相关，帧率
   c->Param.stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;

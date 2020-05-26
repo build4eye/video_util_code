@@ -4,6 +4,11 @@
 #include <sys/mman.h>
 
 #define DEFBUFCOUNT 5  //默认缓存映射大小
+#define ERR_EXIT(m)     \
+  do {                  \
+    perror(m);          \
+    exit(EXIT_FAILURE); \
+  } while (0)
 
 struct CameraClass {
   struct Camera Camera;
@@ -47,15 +52,21 @@ struct Camera* NewCamera(const char* cameraName) {
 
   struct CameraInfo* info = (struct CameraInfo*)c;
   //获取设备信息
-  ioctl(c->fd, VIDIOC_QUERYCAP, &(info->cap));
+  if (0 != ioctl(c->fd, VIDIOC_QUERYCAP, &(info->cap))) {
+    ERR_EXIT("VIDIOC_QUERYCAP");
+  }
 
   //获取已经配置帧格式
   info->format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  ioctl(c->fd, VIDIOC_G_FMT, &(info->format));
+  if (0 != ioctl(c->fd, VIDIOC_G_FMT, &(info->format))) {
+    ERR_EXIT("VIDIOC_G_FMT");
+  }
 
   //获取已经配置　流相关，帧率
   info->stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  ioctl(c->fd, VIDIOC_G_PARM, &(info->stream));
+  if (0 != ioctl(c->fd, VIDIOC_G_PARM, &(info->stream))) {
+    ERR_EXIT("VIDIOC_G_PARM");
+  }
 
   //设置内存映射相关参数
   info->reqbuf.count = DEFBUFCOUNT;
@@ -76,13 +87,17 @@ static void setMmap(struct Camera* camera) {
     c->buf.memory = V4L2_MEMORY_MMAP;
     c->buf.index = _i;
     //查询
-    ioctl(c->fd, VIDIOC_QUERYBUF, &(c->buf));
+    if (0 != ioctl(c->fd, VIDIOC_QUERYBUF, &(c->buf))) {
+      ERR_EXIT("VIDIOC_QUERYBUF");
+    }
     c->bufs[_i].length = c->buf.length;
     c->bufs[_i].start = mmap(NULL, c->buf.length, PROT_READ | PROT_WRITE,
                              MAP_SHARED, c->fd, c->buf.m.offset);
 
     //入队
-    ioctl(c->fd, VIDIOC_QBUF, &(c->buf));
+    if (0 != ioctl(c->fd, VIDIOC_QBUF, &(c->buf))) {
+      ERR_EXIT("VIDIOC_QBUF");
+    }
   }
 }
 
@@ -98,7 +113,9 @@ static void _close(struct Camera* camera) {
   enum v4l2_buf_type type;
   //关闭流
   type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  ioctl(c->fd, VIDIOC_STREAMON, &type);
+  if (0 != ioctl(c->fd, VIDIOC_STREAMON, &type)) {
+    ERR_EXIT("VIDIOC_STREAMON");
+  }
 
   free(c->bufs);
 
@@ -116,22 +133,18 @@ static void _init(struct Camera* camera) {
   CameraClass_P c = (CameraClass_P)camera;
   struct CameraInfo* info = (struct CameraInfo*)camera;
 
-  // for (char _i = 0; _i < DEFBUFCOUNT; _i++) {
-  //   munmap(c->bufs[_i].start, c->bufs[_i].length);
-  // }
-
   //设置帧格式
-  if (-1 == ioctl(c->fd, VIDIOC_S_FMT, &(info->format))) {
-    printf("asdas");
+  if (0 != ioctl(c->fd, VIDIOC_S_FMT, &(info->format))) {
+    ERR_EXIT("VIDIOC_S_FMT");
   }
   //设置流相关，帧率
-  if (-1 == ioctl(c->fd, VIDIOC_S_PARM, &(info->stream))) {
-    printf("gdfg");
+  if (0 != ioctl(c->fd, VIDIOC_S_PARM, &(info->stream))) {
+    ERR_EXIT("VIDIOC_S_PARM");
   }
 
   //设置内存映射相关参数
-  if (-1 == ioctl(c->fd, VIDIOC_REQBUFS, &(info->reqbuf))) {
-    printf("ytuuyyuyu");
+  if (0 != ioctl(c->fd, VIDIOC_REQBUFS, &(info->reqbuf))) {
+    ERR_EXIT("VIDIOC_REQBUFS");
   }
 
 _exit:
@@ -147,7 +160,7 @@ static char* _getVideoPixelFormat(struct Camera* camera, unsigned int index) {
   fmtdesc.index = index;
   fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  if (ioctl(c->fd, VIDIOC_ENUM_FMT, &fmtdesc) != -1) {
+  if (ioctl(c->fd, VIDIOC_ENUM_FMT, &fmtdesc) == 0) {
     return fmtdesc.description;
   }
 
@@ -166,7 +179,7 @@ static int _isSuppertPixelFormat(struct Camera* camera, unsigned int format) {
 
   fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   fmt.fmt.pix.pixelformat = format;
-  if (ioctl(c->fd, VIDIOC_TRY_FMT, &fmt) != -1) return 0;
+  if (ioctl(c->fd, VIDIOC_TRY_FMT, &fmt) != 0) return 0;
 
 _exit:
   return 1;
@@ -180,12 +193,16 @@ static void _start(struct Camera* camera) {
 
   info->reqbuf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   info->reqbuf.memory = V4L2_MEMORY_MMAP;
-  ioctl(c->fd, VIDIOC_REQBUFS, &(info->reqbuf));
+  if (0 != ioctl(c->fd, VIDIOC_REQBUFS, &(info->reqbuf))) {
+    ERR_EXIT("VIDIOC_REQBUFS");
+  }
   //申请用户空间的地址列
   setMmap((struct Camera*)c);
 
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  ioctl(c->fd, VIDIOC_STREAMON, &type);
+  if (0 != ioctl(c->fd, VIDIOC_STREAMON, &type)) {
+    ERR_EXIT("VIDIOC_STREAMON");
+  }
 }
 //结束采集
 static void _stop(struct Camera* camera) {
@@ -196,9 +213,11 @@ static void _stop(struct Camera* camera) {
   for (char _i = 0; _i < c->Camera.Param.reqbuf.count; _i++) {
     munmap(c->bufs[_i].start, c->bufs[_i].length);
   }
-  
+
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  ioctl(c->fd, VIDIOC_STREAMOFF, &type);
+  if (0 != ioctl(c->fd, VIDIOC_STREAMOFF, &type)) {
+    ERR_EXIT("VIDIOC_STREAMOFF");
+  }
 }
 
 //出队一帧数据缓存
@@ -211,7 +230,9 @@ static struct RawBuffer* _popRaw(struct Camera* camera) {
   c->buf.memory = V4L2_MEMORY_MMAP;
 
   //出队
-  ioctl(c->fd, VIDIOC_DQBUF, &(c->buf));
+  if (0 != ioctl(c->fd, VIDIOC_DQBUF, &(c->buf))) {
+    ERR_EXIT("VIDIOC_DQBUF");
+  }
   c->bufs[c->buf.index].timestamp =
       c->buf.timestamp.tv_sec * 1000000 + c->buf.timestamp.tv_usec;
   c->bufs[c->buf.index].index = c->buf.index;
@@ -229,7 +250,9 @@ static void _pushRaw(struct Camera* camera, struct RawBuffer* buf) {
   c->buf.memory = V4L2_MEMORY_MMAP;
   c->buf.index = buf->index;
   //出队
-  ioctl(c->fd, VIDIOC_QBUF, &(c->buf));
+  if (0 != ioctl(c->fd, VIDIOC_QBUF, &(c->buf))) {
+    ERR_EXIT("VIDIOC_QBUF");
+  }
 
   return;
 }
